@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[52]:
+# In[1]:
 
 get_ipython().magic(u'matplotlib')
 import seaborn as sns
@@ -16,7 +16,7 @@ from matplotlib import pylab as plt
 from __future__ import with_statement
 
 
-# In[53]:
+# In[2]:
 
 gradefile = "stat110.csv"
 grades = pd.read_csv(gradefile)
@@ -25,7 +25,7 @@ grades = pd.read_csv(gradefile)
 grades = grades.drop([0,1],axis=0)
 
 
-# In[54]:
+# In[3]:
 
 # we're writing out student names so we can fill in gender data manually 
 sfile = "students.csv"
@@ -37,12 +37,12 @@ except EnvironmentError:
     grades['Gender'] = None
 
 
-# In[55]:
+# In[4]:
 
 grades.columns
 
 
-# In[66]:
+# In[5]:
 
 def getpset(pset):
     subset = grades
@@ -69,7 +69,7 @@ def getpset(pset):
     return subset
 
 
-# In[67]:
+# In[6]:
 
 def make_corr_plot(d, title="plot"):
     f, ax = plt.subplots(figsize=(9, 9))
@@ -81,7 +81,7 @@ def make_corr_plot(d, title="plot"):
     f.savefig(title)
 
 
-# In[68]:
+# In[7]:
 
 def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
     fig = plt.figure()
@@ -104,7 +104,7 @@ def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
     fig.savefig(title + ".png")
 
 
-# In[69]:
+# In[8]:
 
 # on campus mean
 def stats(pset, percent=True):
@@ -116,26 +116,29 @@ def stats(pset, percent=True):
             np.mean(pset), np.std(pset),np.median(pset), np.percentile(pset,25), np.percentile(pset,75), min(pset),max(pset))
 
 
-# In[70]:
+# In[9]:
 
 hw1 = getpset("Homework 1")
 hw2 = getpset("Homework 2")
+hw3 = getpset("Homework 3")
 # print len(grades[grades["Homework 2 (46145)"] != 0]["Homework 2 (46145)"])
 
 
-# In[71]:
+# In[12]:
 
-len(hw2['Homework 2 '])
-
-
-# In[72]:
-
-make_histogram(hw2['Homework 2 '], 'Problem Set 2', step=5)
+len(hw3['Homework 3 '])
 
 
-# In[73]:
+# In[14]:
 
+make_histogram(hw3['Homework 3 '], 'Problem Set 3', step=5)
+
+
+# In[16]:
+
+stats(hw1['Homework 1 '], percent=False)
 stats(hw2['Homework 2 '], percent=False)
+stats(hw3['Homework 3 '], percent=False)
 
 
 # In[14]:
