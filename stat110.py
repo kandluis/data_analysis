@@ -21,11 +21,14 @@ from __future__ import with_statement
 gradefile = "stat110.csv"
 grades = pd.read_csv(gradefile)
 
+
+# In[3]:
+
 # drop top two rows (:points possible, NaN)
 grades = grades.drop([0,1],axis=0)
 
 
-# In[3]:
+# In[4]:
 
 # we're writing out student names so we can fill in gender data manually 
 sfile = "students.csv"
@@ -37,15 +40,70 @@ except EnvironmentError:
     grades['Gender'] = None
 
 
-# In[4]:
-
-grades.columns
-
-
 # In[5]:
 
-def getpset(pset):
-    subset = grades
+google_doc = "google_doc.csv"
+google = pd.read_csv(google_doc)
+names = pd.read_csv("names.csv")
+
+
+# In[6]:
+
+names
+
+
+# In[7]:
+
+names.columns, google.columns, grades.columns
+
+
+# In[9]:
+
+# Join the names to the midterms, so then we can join the result to the canvas data
+googleNames = pd.merge(google, names, left_on="Name", right_on="Doc")
+
+# For some reason, 'HW2 electronic?' column comes in as 'object' type rather than float.
+# This is likely due to the fact that someone input Score(...) as a value for the column.
+# We do this for all the columns in place!
+keys = ['HW2', 'HW3', 'HW4', 'HW5']
+for key in keys:
+    googleNames[key + ' electronic?'] = googleNames[key + ' electronic?'].convert_objects(convert_numeric=True)
+print "Finished converting all of the values!"
+
+
+# In[10]:
+
+googleNames.columns
+
+
+# In[11]:
+
+# Now join to the canvas
+joinedResults = pd.merge(googleNames, grades, left_on="Canvas", right_on="Student")
+joinedResults.columns
+
+
+# In[12]:
+
+# Keep the important columns
+toKeep = ['Doc', 'M1', 'M2', 'M3', 'M4', 'M', 'Homework 1 (42101)', 'Homework 2 (46145)', 'Homework 3 (47478)', 'Homework 4 (48482)']
+toKeep += ['HW4 electronic?', 'HW3 electronic?', 'HW2 electronic?', 'Student', 'Gender']
+
+
+# In[13]:
+
+dataAll = joinedResults[toKeep]
+
+
+# In[14]:
+
+dataAll
+
+
+# In[15]:
+
+def getpset(pset, source=grades):
+    subset = source
     # print len(grades)
     # make prettry
     import re
@@ -60,8 +118,8 @@ def getpset(pset):
     # print len(subset)
     
     # we add in the Student and Gender Columns
-    subset['Student'] = grades.Student
-    subset['Gender'] = grades.Gender
+    subset['Student'] = source.Student
+    subset['Gender'] = source.Gender
         
     # reorder columns
     subset = subset.ix[:,[subset.columns[-2],subset.columns[-1]] + list(subset.columns[:len(subset.columns) - 2])]
@@ -69,7 +127,7 @@ def getpset(pset):
     return subset
 
 
-# In[6]:
+# In[16]:
 
 def make_corr_plot(d, title="plot"):
     f, ax = plt.subplots(figsize=(9, 9))
@@ -81,7 +139,7 @@ def make_corr_plot(d, title="plot"):
     f.savefig(title)
 
 
-# In[7]:
+# In[17]:
 
 def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
     fig = plt.figure()
@@ -96,7 +154,7 @@ def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
                 print "Removed grade"
         except ValueError:
             pass
-    ax.hist(nd,bins=range(0,42+step,step),alpha=0.8,align='mid')
+    ax.hist(nd,bins=range(0,int(max(d))+step,step),alpha=0.8,align='mid')
     plt.title(title + " Histogram")
     plt.xlabel(xlabel)
     plt.ylabel("Frequency")
@@ -104,7 +162,7 @@ def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
     fig.savefig(title + ".png")
 
 
-# In[8]:
+# In[18]:
 
 # on campus mean
 def stats(pset, percent=True):
@@ -116,77 +174,162 @@ def stats(pset, percent=True):
             np.mean(pset), np.std(pset),np.median(pset), np.percentile(pset,25), np.percentile(pset,75), min(pset),max(pset))
 
 
-# In[9]:
+# In[19]:
 
-hw1 = getpset("Homework 1")
-hw2 = getpset("Homework 2")
-hw3 = getpset("Homework 3")
-# print len(grades[grades["Homework 2 (46145)"] != 0]["Homework 2 (46145)"])
-
-
-# In[12]:
-
-len(hw3['Homework 3 '])
-
-
-# In[14]:
-
-make_histogram(hw3['Homework 3 '], 'Problem Set 3', step=5)
-
-
-# In[16]:
-
-stats(hw1['Homework 1 '], percent=False)
-stats(hw2['Homework 2 '], percent=False)
-stats(hw3['Homework 3 '], percent=False)
+def filterPset(pset, t=None, source=dataAll):
+    # Filters based on the type of the grade for `pset'. If t parameter is None, then we keep all the grades.
+    # If t is True, we keep only the electronic copies.
+    # If t is False, we keep only the paper copies.
+    # pset should really be in type 'HWx electronic?'
+    
+    # Drop NAs
+    source.dropna(subset=[pset])
+    
+    # Which do we keep?
+    keepType = [1, 0] if t is None else [1] if t else [0]
+    
+    # Filter on data type we've decided to keep
+    return source[source[pset].isin(keepType)]
 
 
-# In[14]:
+# In[20]:
 
-final = getpset("^Final Score")
-finale = getpset("^Final Score", True)
-len(finale)
+len(filterPset("HW3 electronic?")), len(filterPset("HW3 electronic?", t=True)), len(filterPset("HW3 electronic?", t=False))
 
 
-# In[15]:
+# In[21]:
 
-finale
+hws = ['2', '3', '4']
+types = [('All', None), ('Electronic', True), ('Paper', False)]
+statistics = {} # We have a key: (Mean, Std, Median, LQ, UQ, Min, Max)
+for hw in hws:
+    for text, t in types:
+        res = getpset("Homework {}".format(hw), source=filterPset("HW{} electronic?".format(hw), t=t))
+        
+        # Calculate the statistics and print the results out
+        print "Results for Homework {} ({})".format(hw, text)
+        print "Number of samples is {}".format(len(res))
+        column = res["Homework {} ".format(hw)]
+        stats(column , percent=False)
+        print ""
+        
+        # We're collecting some statistics so we can plot them later. 
+        statistics["HW{} ({})".format(hw, text)] = (
+            hw, t, 
+            np.mean(column),
+            np.std(column),
+            np.median(column),
+            np.percentile(column, 25),
+            np.percentile(column, 75),
+            min(column), max(column))
 
 
-# In[16]:
+# In[22]:
 
-finale = finale[[student in list(pset8e.Student)for student in finale.Student]]
+hw_means = []
+hw_std = []
+for hw in hws:
+    hw_means.append([ (x[2]) for k,x in sorted(statistics.items()) if x[0] == hw])
+    hw_std.append([ x[3] for k,x in sorted(statistics.items()) if x[0] == hw])
+hw_means = pd.DataFrame(hw_means)
+hw_std = pd.DataFrame(hw_std)
 
 
-# In[31]:
+# In[23]:
 
-make_histogram(final['Final Score'], 'Cumulative Grade', step=5)
-make_histogram(finale['Final Score'], 'Cumulative Grade (extension)', step=15)
-
-
-# In[35]:
-
-stats(final['Final Score'])
-stats(finale['Final Score'])
+allT, allTStd = hw_means.ix[:, 0], hw_std.ix[:, 0]
+electronic, electronicStd = hw_means.ix[:, 1], hw_std.ix[:, 0]
+paper, paperStd = hw_means.ix[:, 2], hw_std.ix[:, 0]
 
 
 # In[24]:
 
-grades.head(10)
+hw_means
 
 
-# In[21]:
+# In[25]:
+
+N = len(hws)
+ind = np.arange(N)
+width = 0.2
+
+fig, ax = plt.subplots()
+rects1 = ax.bar(ind, allT, width, color='r', yerr=allTStd)
+rects2 = ax.bar(ind+width, electronic, width, color='y', yerr=electronicStd)
+rects3 = ax.bar(ind+2*width, paper, width, color='b', yerr=paperStd)
+
+# add some text for labels, title and axes ticks
+ax.set_ylabel('Mean Score')
+ax.set_title('Mean Homework Scores by Type')
+ax.set_xticks(ind+1.5*width)
+ax.set_xticklabels( ('HW2', 'HW3', 'HW4') )
+
+ax.legend( (rects1[0], rects2[0], rects3[0]), ('All', 'Electronic', 'Paper') )
+
+def autolabel(rects):
+    # attach some text labels
+    for rect in rects:
+        height = rect.get_height()
+        ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%f'%height,
+                ha='center', va='bottom')
+
+autolabel(rects1)
+autolabel(rects2)
+autolabel(rects3)
+
+
+# In[ ]:
+
+make_histogram(hw4['Homework 4 '], 'Problem Set 4', "Score (of of 42, step=3)", step=3)
+
+
+# In[ ]:
+
+stats(hw1['Homework 1 '], percent=False)
+stats(hw2['Homework 2 '], percent=False)
+stats(hw3['Homework 3 '], percent=False)
+stats(hw4['Homework 4 '], percent=False)
+
+
+# In[ ]:
+
+# Clean data
+midtermNoFree = midterm.drop("Free", 1)
+midtermClean = midtermNoFree[midtermNoFree.M > 2]
+
+
+# In[ ]:
+
+midtermClean.M.max()
+
+
+# In[ ]:
+
+make_corr_plot(midtermClean, "Midterm Problem Correlations")
+
+
+# In[ ]:
+
+make_histogram(midtermClean.M, "Midterm Points", "Score (out of 50)", step=5)
+
+
+# In[ ]:
+
+stats(midtermClean.M, percent=False)
+
+
+# In[ ]:
 
 midterm2 = getpset("Midterm 2")
 midterm2e = getpset("Midterm 2", True)
 
 
-# In[22]:
+# In[ ]:
 
 midterm2.ix[:,:8].head(10)
 
 
-# In[24]:
+# In[ ]:
 
 m2 = midterm2.ix[:,:6].astype(float)
 m2e = midterm2e.ix[:,:6].astype(float)
@@ -200,34 +343,34 @@ corrm2 = m2.corr()
 corrm2e = m2e.corr()
 
 
-# In[51]:
+# In[ ]:
 
 m2.max(axis=0), midterm2.max(axis=0)
 
 
-# In[98]:
+# In[ ]:
 
 m2.head(10)
 
 
-# In[65]:
+# In[ ]:
 
 make_corr_plot(m2, "Midterm 2 Correlation")
 make_corr_plot(m2e, "Midterm 2 Correlation Extention")
 
 
-# In[30]:
+# In[ ]:
 
 corrm2.head(10)
 
 
-# In[66]:
+# In[ ]:
 
 stats(midterm2['Midterm 2 Current Score'])
 stats(midterm2e['Midterm 2 Current Score'])
 
 
-# In[32]:
+# In[ ]:
 
 for col, cole in zip(exam.columns[2:],exame.columns[2:]):
     print "Statistics for {}.".format(col)
@@ -235,49 +378,49 @@ for col, cole in zip(exam.columns[2:],exame.columns[2:]):
     stats(exame[cole],False)
 
 
-# In[91]:
+# In[ ]:
 
 make_histogram(midterm2['Midterm 2 Current Score'], 'Midterm 2',numBins=10)
 make_histogram(midterm2e['Midterm 2 Current Score'], 'Midterm 2',numBins=5)
 
 
-# In[24]:
+# In[ ]:
 
 ungraded = ['Extra Credit Final Score', 'Midterm Private Final Score']
 percentiles = getpset("Final Score").drop(ungraded,axis=1)
 percentilese = getpset("Final Score",True).drop(ungraded,axis=1)
 
 
-# In[25]:
+# In[ ]:
 
 percentiles.head(10)
 
 
-# In[26]:
+# In[ ]:
 
 # normalize the percentiles
 corrp = percentiles.corr()
 corrpe = percentilese.corr()
 
 
-# In[27]:
+# In[ ]:
 
 corrpe
 
 
-# In[28]:
+# In[ ]:
 
 make_corr_plot(percentiles,title="Grade Correlation")
 make_corr_plot(percentilese,title="Grade Correlation Extension")
 
 
-# In[106]:
+# In[ ]:
 
 corrm2 = m2.div(pd.Series([8.,10.,11.,8.,10.,8.]).iloc[0],axis='index')
 corrm2e = m2e.div(pd.Series([8.,10.,11.,8.,10.,8.]).iloc[0],axis='index')
 
 
-# In[113]:
+# In[ ]:
 
 c2 = ((corrm2 - corrm2.mean(axis=0)) / corrm2.std(axis=0)).corr()
 c2e = ((corrm2e - corrm2e.mean(axis=0)) / corrm2e.std(axis=0)).corr()
@@ -289,7 +432,7 @@ make_corr_plot(c2,title="Grade Correlation")
 make_corr_plot(c2e,title="Grade Correlation Extension")
 
 
-# In[131]:
+# In[ ]:
 
 def make_scatter(xaxis, yaxis = "Midterm 2 Final Score"):
     fig = plt.figure()
@@ -297,7 +440,7 @@ def make_scatter(xaxis, yaxis = "Midterm 2 Final Score"):
     plt.title("{} vs {}".format(yaxis,x))
 
 
-# In[132]:
+# In[ ]:
 
 psets = ["Problem Set {} Final Score".format(x) for x in xrange(1,7)]
 psets
@@ -309,7 +452,7 @@ for pset in psets:
     make_scatter(pset)
 
 
-# In[139]:
+# In[ ]:
 
 def make_scatter_index(yaxis = "Midterm 2 Final Score"):
     fig = plt.figure()
@@ -317,13 +460,13 @@ def make_scatter_index(yaxis = "Midterm 2 Final Score"):
     plt.title("{} vs index".format(yaxis))
 
 
-# In[140]:
+# In[ ]:
 
 for pset in psets:
     make_scatter_index(pset)
 
 
-# In[29]:
+# In[ ]:
 
 # now we analyze gender data
 male = percentiles[percentiles.Gender == "M"]
@@ -332,56 +475,56 @@ malee =percentilese[percentilese.Gender == "M"]
 femalee =percentilese[percentilese.Gender == "F"]
 
 
-# In[33]:
+# In[ ]:
 
 male.mean(), len(male)
 
 
-# In[32]:
+# In[ ]:
 
 female.mean(), len(female)
 
 
-# In[34]:
+# In[ ]:
 
 malee.mean(), len(malee)
 
 
-# In[35]:
+# In[ ]:
 
 femalee.mean(), len(femalee)
 
 
-# In[38]:
+# In[ ]:
 
 make_histogram(male['Problem Set 6 Final Score'], 'pset6_hist_male', 10)
 make_histogram(female['Problem Set 6 Final Score'], 'pset6_hist_female',10)
 
 
-# In[40]:
+# In[ ]:
 
 make_histogram(male['Midterm 2 Final Score'], 'pset6_hist_male', 10)
 make_histogram(female['Midterm 2 Final Score'], 'pset6_hist_female',10)
 
 
-# In[33]:
+# In[ ]:
 
 allgrades = getpset("Problem Set [0-9] Final|Midterm [0-2] Final")
 allgradese = getpset("Problem Set [0-9] Final|Midterm [0-2] Final", True)
 
 
-# In[34]:
+# In[ ]:
 
 make_corr_plot(allgrades, "All Grades")
 
 
-# In[27]:
+# In[ ]:
 
 allproblems = getpset("Pset [0-9]|Midterm [0-2] Final")
 allproblemse = getpset("Pset [0-9]|Midterm [0-2] Final", True)
 
 
-# In[28]:
+# In[ ]:
 
 make_corr_plot(allproblems, "All Problems")
 
