@@ -57,7 +57,7 @@ names
 names.columns, google.columns, grades.columns
 
 
-# In[9]:
+# In[8]:
 
 # Join the names to the midterms, so then we can join the result to the canvas data
 googleNames = pd.merge(google, names, left_on="Name", right_on="Doc")
@@ -71,36 +71,36 @@ for key in keys:
 print "Finished converting all of the values!"
 
 
-# In[10]:
+# In[9]:
 
 googleNames.columns
 
 
-# In[11]:
+# In[10]:
 
 # Now join to the canvas
 joinedResults = pd.merge(googleNames, grades, left_on="Canvas", right_on="Student")
 joinedResults.columns
 
 
-# In[12]:
+# In[11]:
 
 # Keep the important columns
 toKeep = ['Doc', 'M1', 'M2', 'M3', 'M4', 'M', 'Homework 1 (42101)', 'Homework 2 (46145)', 'Homework 3 (47478)', 'Homework 4 (48482)']
-toKeep += ['HW4 electronic?', 'HW3 electronic?', 'HW2 electronic?', 'Student', 'Gender']
+toKeep += ['Homework 5 (50651)', 'HW5 electronic?', 'HW4 electronic?', 'HW3 electronic?', 'HW2 electronic?', 'Student', 'Gender']
 
 
-# In[13]:
+# In[12]:
 
 dataAll = joinedResults[toKeep]
 
 
+# In[26]:
+
+dataAll.M
+
+
 # In[14]:
-
-dataAll
-
-
-# In[15]:
 
 def getpset(pset, source=grades):
     subset = source
@@ -127,7 +127,7 @@ def getpset(pset, source=grades):
     return subset
 
 
-# In[16]:
+# In[15]:
 
 def make_corr_plot(d, title="plot"):
     f, ax = plt.subplots(figsize=(9, 9))
@@ -139,7 +139,7 @@ def make_corr_plot(d, title="plot"):
     f.savefig(title)
 
 
-# In[17]:
+# In[16]:
 
 def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
     fig = plt.figure()
@@ -162,19 +162,19 @@ def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
     fig.savefig(title + ".png")
 
 
-# In[18]:
+# In[17]:
 
 # on campus mean
 def stats(pset, percent=True):
     if percent:
-        print "mean: {:.2f}% (standard deviation {:.2f}%) and median {:.2f}%. Lower Quartile: {:.2f}%. Upper Quartile: {:.2f}%. Min: {:.2f}%, Max: {:.2f}%".format(
+        print "Mean: {:.2f}% (standard deviation {:.2f}%)\n Median {:.2f}%\n Lower Quartile: {:.2f}%\n Upper Quartile: {:.2f}%\n Min: {:.2f}%\n Max: {:.2f}%".format(
             np.mean(pset), np.std(pset),np.median(pset), np.percentile(pset,25), np.percentile(pset,75), min(pset),max(pset))
     else:
-        print "mean: {:.2f} (standard deviation {:.2f}) and median {:.2f}. Lower Quartile: {:.2f}. Upper Quartile: {:.2f}. Min: {:.2f}, Max: {:.2f}".format(
+        print "Mean: {:.2f} (standard deviation {:.2f})\n Median {:.2f}\n Lower Quartile: {:.2f}\n Upper Quartile: {:.2f}\n Min: {:.2f}\n Max: {:.2f}".format(
             np.mean(pset), np.std(pset),np.median(pset), np.percentile(pset,25), np.percentile(pset,75), min(pset),max(pset))
 
 
-# In[19]:
+# In[18]:
 
 def filterPset(pset, t=None, source=dataAll):
     # Filters based on the type of the grade for `pset'. If t parameter is None, then we keep all the grades.
@@ -192,14 +192,14 @@ def filterPset(pset, t=None, source=dataAll):
     return source[source[pset].isin(keepType)]
 
 
+# In[19]:
+
+len(filterPset("HW5 electronic?")), len(filterPset("HW5 electronic?", t=True)), len(filterPset("HW5 electronic?", t=False))
+
+
 # In[20]:
 
-len(filterPset("HW3 electronic?")), len(filterPset("HW3 electronic?", t=True)), len(filterPset("HW3 electronic?", t=False))
-
-
-# In[21]:
-
-hws = ['2', '3', '4']
+hws = ['2', '3', '4', '5']
 types = [('All', None), ('Electronic', True), ('Paper', False)]
 statistics = {} # We have a key: (Mean, Std, Median, LQ, UQ, Min, Max)
 for hw in hws:
@@ -224,7 +224,12 @@ for hw in hws:
             min(column), max(column))
 
 
-# In[22]:
+# In[27]:
+
+statistics
+
+
+# In[21]:
 
 hw_means = []
 hw_std = []
@@ -235,19 +240,19 @@ hw_means = pd.DataFrame(hw_means)
 hw_std = pd.DataFrame(hw_std)
 
 
-# In[23]:
+# In[22]:
 
 allT, allTStd = hw_means.ix[:, 0], hw_std.ix[:, 0]
 electronic, electronicStd = hw_means.ix[:, 1], hw_std.ix[:, 0]
 paper, paperStd = hw_means.ix[:, 2], hw_std.ix[:, 0]
 
 
+# In[23]:
+
+hw_std
+
+
 # In[24]:
-
-hw_means
-
-
-# In[25]:
 
 N = len(hws)
 ind = np.arange(N)
@@ -262,7 +267,7 @@ rects3 = ax.bar(ind+2*width, paper, width, color='b', yerr=paperStd)
 ax.set_ylabel('Mean Score')
 ax.set_title('Mean Homework Scores by Type')
 ax.set_xticks(ind+1.5*width)
-ax.set_xticklabels( ('HW2', 'HW3', 'HW4') )
+ax.set_xticklabels( ('HW2', 'HW3', 'HW4', 'HW5') )
 
 ax.legend( (rects1[0], rects2[0], rects3[0]), ('All', 'Electronic', 'Paper') )
 
@@ -278,34 +283,95 @@ autolabel(rects2)
 autolabel(rects3)
 
 
-# In[ ]:
+# In[48]:
 
-make_histogram(hw4['Homework 4 '], 'Problem Set 4', "Score (of of 42, step=3)", step=3)
-
-
-# In[ ]:
-
-stats(hw1['Homework 1 '], percent=False)
-stats(hw2['Homework 2 '], percent=False)
-stats(hw3['Homework 3 '], percent=False)
-stats(hw4['Homework 4 '], percent=False)
+hw_name = 'Homework 5 '
+hw = getpset(hw_name)
+make_histogram(hw[hw_name], hw_name, "Score (of of 42, step=3)", step=3)
 
 
-# In[ ]:
+# In[52]:
 
-# Clean data
-midtermNoFree = midterm.drop("Free", 1)
-midtermClean = midtermNoFree[midtermNoFree.M > 2]
+stats(hw[hw_name], percent=False)
 
 
-# In[ ]:
+# In[53]:
 
-midtermClean.M.max()
+# We reuse the homeworks to plot the average score on a pset broken by type compared with the average score
+# on the midterm.
+statistics_midterm = {} # We have a key: (Mean, Std, Median, LQ, UQ, Min, Max)
+for hw in hws:
+    for text, t in types:
+        res = getpset("M", source=filterPset("HW{} electronic?".format(hw), t=t))
+        midterm = res["M"]
+        
+        print "Results for Homework {} ({})".format(hw, text)
+        print "Number of samples is {}".format(len(res))
+        stats(midterm , percent=False)
+        print ""
+        
+        # Calculate some statistics
+        statistics_midterm["HW{} ({})".format(hw, text)] = (
+            hw, t, 
+            len(midterm),
+            np.mean(midterm),
+            np.std(midterm),
+            np.median(midterm),
+            np.percentile(midterm, 25),
+            np.percentile(midterm, 75),
+            min(midterm), max(midterm))
 
 
-# In[ ]:
+# In[49]:
 
-make_corr_plot(midtermClean, "Midterm Problem Correlations")
+midterm_means = []
+midterm_std = []
+midterm_meadians = []
+for hw in hws:
+    midterm_means.append([ (x[3]) for k,x in sorted(statistics_midterm.items()) if x[0] == hw])
+    midterm_std.append([ x[4] for k,x in sorted(statistics_midterm.items()) if x[0] == hw])
+    midterm_meadians.append([ x[5] for k,x in sorted(statistics_midterm.items()) if x[0] == hw])
+midterm_means = pd.DataFrame(midterm_means)
+midterm_std = pd.DataFrame(midterm_std)
+midterm_meadians = pd.DataFrame(midterm_meadians)
+
+
+# In[51]:
+
+allT, allTStd = midterm_means.ix[:, 0], midterm_std.ix[:, 0]
+electronic, electronicStd = midterm_means.ix[:, 1], midterm_std.ix[:, 0]
+paper, paperStd = midterm_means.ix[:, 2], midterm_std.ix[:, 0]
+
+
+# In[52]:
+
+N = len(hws)
+ind = np.arange(N)
+width = 0.2
+
+fig, ax = plt.subplots()
+rects1 = ax.bar(ind, allT, width, color='r', yerr=allTStd)
+rects2 = ax.bar(ind+width, electronic, width, color='y', yerr=electronicStd)
+rects3 = ax.bar(ind+2*width, paper, width, color='b', yerr=paperStd)
+
+# add some text for labels, title and axes ticks
+ax.set_ylabel('Mean Score')
+ax.set_title('Mean Midterm Scores by Homework Type Submissions')
+ax.set_xticks(ind+1.5*width)
+ax.set_xticklabels( ('HW2', 'HW3', 'HW4', 'HW5') )
+
+ax.legend( (rects1[0], rects2[0], rects3[0]), ('All', 'Electronic', 'Paper') )
+
+def autolabel(rects):
+    # attach some text labels
+    for rect in rects:
+        height = rect.get_height()
+        ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%f'%height,
+                ha='center', va='bottom')
+
+autolabel(rects1)
+autolabel(rects2)
+autolabel(rects3)
 
 
 # In[ ]:
