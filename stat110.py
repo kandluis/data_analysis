@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[24]:
 
 get_ipython().magic(u'matplotlib')
 import seaborn as sns
@@ -13,22 +13,28 @@ import seaborn
 
 from matplotlib import pylab as plt
 
+from collections import defaultdict
+
 from __future__ import with_statement
 
 
-# In[2]:
+# In[4]:
 
 gradefile = "stat110.csv"
+
+
+# In[5]:
+
 grades = pd.read_csv(gradefile)
 
 
-# In[3]:
+# In[6]:
 
 # drop top two rows (:points possible, NaN)
 grades = grades.drop([0,1],axis=0)
 
 
-# In[4]:
+# In[7]:
 
 # we're writing out student names so we can fill in gender data manually 
 sfile = "students.csv"
@@ -40,24 +46,24 @@ except EnvironmentError:
     grades['Gender'] = None
 
 
-# In[5]:
+# In[8]:
 
 google_doc = "google_doc.csv"
 google = pd.read_csv(google_doc)
 names = pd.read_csv("names.csv")
 
 
-# In[6]:
+# In[9]:
 
-names
+grades
 
 
-# In[7]:
+# In[10]:
 
 names.columns, google.columns, grades.columns
 
 
-# In[8]:
+# In[11]:
 
 # Join the names to the midterms, so then we can join the result to the canvas data
 googleNames = pd.merge(google, names, left_on="Name", right_on="Doc")
@@ -65,42 +71,43 @@ googleNames = pd.merge(google, names, left_on="Name", right_on="Doc")
 # For some reason, 'HW2 electronic?' column comes in as 'object' type rather than float.
 # This is likely due to the fact that someone input Score(...) as a value for the column.
 # We do this for all the columns in place!
-keys = ['HW2', 'HW3', 'HW4', 'HW5']
+keys = ['HW2', 'HW3', 'HW4', 'HW5', 'HW6', 'HW7']
 for key in keys:
     googleNames[key + ' electronic?'] = googleNames[key + ' electronic?'].convert_objects(convert_numeric=True)
 print "Finished converting all of the values!"
 
 
-# In[9]:
+# In[12]:
 
 googleNames.columns
 
 
-# In[10]:
+# In[13]:
 
 # Now join to the canvas
 joinedResults = pd.merge(googleNames, grades, left_on="Canvas", right_on="Student")
 joinedResults.columns
 
 
-# In[11]:
+# In[14]:
+
+joinedResults['Homework 7 (53575)']
+
+
+# In[15]:
 
 # Keep the important columns
 toKeep = ['Doc', 'M1', 'M2', 'M3', 'M4', 'M', 'Homework 1 (42101)', 'Homework 2 (46145)', 'Homework 3 (47478)', 'Homework 4 (48482)']
-toKeep += ['Homework 5 (50651)', 'HW5 electronic?', 'HW4 electronic?', 'HW3 electronic?', 'HW2 electronic?', 'Student', 'Gender']
+toKeep += ['HW4 electronic?', 'HW3 electronic?', 'HW2 electronic?', 'Student', 'Gender' ]
+toKeep += ['Homework 7 (53575)', 'HW7 electronic?', 'Homework 6 (52035)', 'HW6 electronic?', 'Homework 5 (50651)', 'HW5 electronic?']
 
 
-# In[12]:
+# In[16]:
 
 dataAll = joinedResults[toKeep]
 
 
-# In[26]:
-
-dataAll.M
-
-
-# In[14]:
+# In[17]:
 
 def getpset(pset, source=grades):
     subset = source
@@ -127,7 +134,7 @@ def getpset(pset, source=grades):
     return subset
 
 
-# In[15]:
+# In[18]:
 
 def make_corr_plot(d, title="plot"):
     f, ax = plt.subplots(figsize=(9, 9))
@@ -139,7 +146,7 @@ def make_corr_plot(d, title="plot"):
     f.savefig(title)
 
 
-# In[16]:
+# In[19]:
 
 def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
     fig = plt.figure()
@@ -162,7 +169,7 @@ def make_histogram(d, title="histogram",xlabel="Score (ouf of 42)",step=5):
     fig.savefig(title + ".png")
 
 
-# In[17]:
+# In[20]:
 
 # on campus mean
 def stats(pset, percent=True):
@@ -174,7 +181,7 @@ def stats(pset, percent=True):
             np.mean(pset), np.std(pset),np.median(pset), np.percentile(pset,25), np.percentile(pset,75), min(pset),max(pset))
 
 
-# In[18]:
+# In[21]:
 
 def filterPset(pset, t=None, source=dataAll):
     # Filters based on the type of the grade for `pset'. If t parameter is None, then we keep all the grades.
@@ -192,16 +199,21 @@ def filterPset(pset, t=None, source=dataAll):
     return source[source[pset].isin(keepType)]
 
 
-# In[19]:
+# In[22]:
 
-len(filterPset("HW5 electronic?")), len(filterPset("HW5 electronic?", t=True)), len(filterPset("HW5 electronic?", t=False))
+len(filterPset("HW7 electronic?")), len(filterPset("HW7 electronic?", t=True)), len(filterPset("HW7 electronic?", t=False))
 
 
-# In[20]:
+# In[46]:
 
-hws = ['2', '3', '4', '5']
+
+hws = ['2', '3', '4', '5', '6', '7']
 types = [('All', None), ('Electronic', True), ('Paper', False)]
 statistics = {} # We have a key: (Mean, Std, Median, LQ, UQ, Min, Max)
+
+timeSeries = defaultdict(list) # We have statistic: [] a list of items which contains the statistic for each homework in hws.
+# Note that the order follows the order specified in hws!
+
 for hw in hws:
     for text, t in types:
         res = getpset("Homework {}".format(hw), source=filterPset("HW{} electronic?".format(hw), t=t))
@@ -222,14 +234,43 @@ for hw in hws:
             np.percentile(column, 25),
             np.percentile(column, 75),
             min(column), max(column))
+        
+        timeSeries['{}_mean'.format(text)].append(np.mean(column))
+        # timeSeries['{}_std_dev'.format(text)].append(np.std(column))
+        timeSeries['{}_median'.format(text)].append(np.median(column))
+        timeSeries['{}_count'.format(text)].append(len(column))
+        #timeSeries['lower_quartile'].append(np.percentile(column, 25))
+        #timeSeries['upper_quartile'].append(np.percentile(column, 75))
+        #timeSeries['min'].append(min(column))
+        #timeSeries['max'].append(max(column))
 
 
-# In[27]:
+# In[52]:
 
-statistics
+for statistic in timeSeries:
+    if 'std_dev' not in statistic and 'count' not in statistic:
+        plt.plot(range(2,8), timeSeries[statistic], label=statistic)
+plt.legend()
+plt.title("Statistics Over Time for Stat 110 Homework Assignments")
+plt.xlabel("Homework Number")
+plt.ylabel("Statistic (out of 42)")
+plt.ylim((37,42))
+plt.show()
 
 
-# In[21]:
+# In[53]:
+
+for statistic in timeSeries:
+    if 'count' in statistic:
+        plt.plot(range(2,8), timeSeries[statistic], label=statistic)
+plt.legend()
+plt.title("Homework Submissions for Statistics 110")
+plt.ylabel("#Submissions")
+plt.xlabel("Homework Number")
+plt.show()
+
+
+# In[23]:
 
 hw_means = []
 hw_std = []
@@ -240,19 +281,19 @@ hw_means = pd.DataFrame(hw_means)
 hw_std = pd.DataFrame(hw_std)
 
 
-# In[22]:
+# In[24]:
 
 allT, allTStd = hw_means.ix[:, 0], hw_std.ix[:, 0]
 electronic, electronicStd = hw_means.ix[:, 1], hw_std.ix[:, 0]
 paper, paperStd = hw_means.ix[:, 2], hw_std.ix[:, 0]
 
 
-# In[23]:
+# In[25]:
 
 hw_std
 
 
-# In[24]:
+# In[26]:
 
 N = len(hws)
 ind = np.arange(N)
@@ -283,19 +324,19 @@ autolabel(rects2)
 autolabel(rects3)
 
 
-# In[48]:
+# In[27]:
 
-hw_name = 'Homework 5 '
+hw_name = 'Homework 7 '
 hw = getpset(hw_name)
 make_histogram(hw[hw_name], hw_name, "Score (of of 42, step=3)", step=3)
 
 
-# In[52]:
+# In[28]:
 
 stats(hw[hw_name], percent=False)
 
 
-# In[53]:
+# In[ ]:
 
 # We reuse the homeworks to plot the average score on a pset broken by type compared with the average score
 # on the midterm.
@@ -322,7 +363,7 @@ for hw in hws:
             min(midterm), max(midterm))
 
 
-# In[49]:
+# In[ ]:
 
 midterm_means = []
 midterm_std = []
@@ -336,14 +377,14 @@ midterm_std = pd.DataFrame(midterm_std)
 midterm_meadians = pd.DataFrame(midterm_meadians)
 
 
-# In[51]:
+# In[ ]:
 
 allT, allTStd = midterm_means.ix[:, 0], midterm_std.ix[:, 0]
 electronic, electronicStd = midterm_means.ix[:, 1], midterm_std.ix[:, 0]
 paper, paperStd = midterm_means.ix[:, 2], midterm_std.ix[:, 0]
 
 
-# In[52]:
+# In[ ]:
 
 N = len(hws)
 ind = np.arange(N)
